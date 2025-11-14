@@ -93,6 +93,27 @@ export default {
           from: { transform: "translateY(100%)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
         },
+        "float": {
+          "0%, 100%": {
+            transform: "translateY(0px) rotate(0deg)"
+          },
+          "33%": {
+            transform: "translateY(-20px) rotate(2deg)"
+          },
+          "66%": {
+            transform: "translateY(-10px) rotate(-2deg)"
+          }
+        },
+        "scale-in": {
+          "0%": {
+            transform: "scale(0.95)",
+            opacity: "0"
+          },
+          "100%": {
+            transform: "scale(1)",
+            opacity: "1"
+          }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -102,6 +123,10 @@ export default {
         "glow": "glow 3s ease-in-out infinite",
         "shimmer": "shimmer 3s ease-in-out infinite",
         "slide-up": "slide-up 0.5s ease-out",
+        "float-slow": "float 6s ease-in-out infinite",
+        "float-medium": "float 5s ease-in-out infinite 0.5s",
+        "float-fast": "float 4s ease-in-out infinite 1s",
+        "scale-in": "scale-in 0.3s ease-out",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
