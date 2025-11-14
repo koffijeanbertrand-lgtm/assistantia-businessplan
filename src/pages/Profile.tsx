@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Upload, User } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, User, Moon, Sun } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 
 interface Profile {
@@ -29,6 +30,7 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,12 +66,21 @@ const Profile = () => {
 
       if (error) throw error;
       
+      const preferences = typeof data.preferences === 'object' && data.preferences !== null
+        ? data.preferences as { theme?: string; notifications?: boolean }
+        : { theme: 'light', notifications: true };
+      
       setProfile({
         ...data,
-        preferences: typeof data.preferences === 'object' && data.preferences !== null
-          ? data.preferences as { theme?: string; notifications?: boolean }
-          : { theme: 'light', notifications: true }
+        preferences
       });
+      
+      // Sync theme with user preference
+      if (preferences.theme) {
+        setTimeout(() => {
+          setTheme(preferences.theme!);
+        }, 0);
+      }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       toast({
@@ -163,6 +174,7 @@ const Profile = () => {
           full_name: fullName,
           preferences: {
             ...profile.preferences,
+            theme: theme || 'light',
             notifications,
           },
         })
@@ -173,7 +185,11 @@ const Profile = () => {
       setProfile(prev => prev ? {
         ...prev,
         full_name: fullName,
-        preferences: { ...prev.preferences, notifications },
+        preferences: { 
+          ...prev.preferences, 
+          theme: theme || 'light',
+          notifications 
+        },
       } : null);
 
       toast({
@@ -293,6 +309,29 @@ const Profile = () => {
               {/* Preferences */}
               <div className="space-y-4 pt-4 border-t border-border">
                 <h3 className="font-semibold text-foreground">Préférences</h3>
+                
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="theme">Mode sombre</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Basculer entre les thèmes clair et sombre
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {theme === 'dark' ? (
+                      <Moon className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Sun className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Switch
+                      id="theme"
+                      checked={theme === 'dark'}
+                      onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
