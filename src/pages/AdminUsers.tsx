@@ -68,7 +68,7 @@ export default function AdminUsers() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!session?.user) {
         navigate("/auth");
         return;
       }
