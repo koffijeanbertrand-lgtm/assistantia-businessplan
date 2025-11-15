@@ -8,10 +8,13 @@ import { useEffect, useState } from "react";
 const Landing = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkAdminRole = async () => {
+    const checkUserStatus = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      
       if (!session) return;
 
       const { data: roleData } = await supabase
@@ -24,8 +27,22 @@ const Landing = () => {
       setIsAdmin(!!roleData);
     };
 
-    checkAdminRole();
+    checkUserStatus();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      if (!session) {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   const features = [
     { icon: Zap, title: "Génération instantanée", description: "Créez votre business plan en quelques minutes grâce à l'IA" },
@@ -55,12 +72,25 @@ const Landing = () => {
                 <Settings className="h-5 w-5" />
               </Button>
             )}
-            <Button variant="ghost" onClick={() => navigate("/auth")}>
-              Connexion
-            </Button>
-            <Button onClick={() => navigate("/generate")} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-              Commencer gratuitement
-            </Button>
+            {isLoggedIn ? (
+              <>
+                <Button variant="ghost" onClick={handleSignOut}>
+                  Déconnexion
+                </Button>
+                <Button onClick={() => navigate("/generate")} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
+                  Générer un plan
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate("/auth")}>
+                  Connexion
+                </Button>
+                <Button onClick={() => navigate("/generate")} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
+                  Commencer gratuitement
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
