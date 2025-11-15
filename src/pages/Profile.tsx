@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Upload, User, Moon, Sun } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, User, Moon, Sun, Shield } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 
 interface Profile {
@@ -348,6 +348,20 @@ const Profile = () => {
                   />
                 </div>
               </div>
+
+              {/* Admin Link */}
+              {session && (
+                <div className="pt-6 border-t border-border">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/admin")}
+                    className="w-full"
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Administration
+                  </Button>
+                </div>
+              )}
 
               {/* Save Button */}
               <Button
