@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Settings, LogOut, Menu, Users } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Settings, LogOut, Menu, Users, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: FolderKanban, label: "Projets", path: "/admin/projects" },
   { icon: Users, label: "Utilisateurs", path: "/admin/users" },
+  { icon: Mail, label: "Messages", path: "/admin/contacts" },
   { icon: Settings, label: "Paramètres", path: "/admin/settings" },
 ];
 
