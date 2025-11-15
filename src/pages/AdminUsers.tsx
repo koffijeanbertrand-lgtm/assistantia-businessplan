@@ -61,6 +61,60 @@ export default function AdminUsers() {
     checkAdminAndLoadUsers();
   }, []);
 
+  useEffect(() => {
+    // Set up realtime subscriptions for automatic updates
+    const profilesChannel = supabase
+      .channel('admin-users-profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    const rolesChannel = supabase
+      .channel('admin-users-roles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_roles'
+        },
+        () => {
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    const projectsChannel = supabase
+      .channel('admin-users-projects-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_plans'
+        },
+        () => {
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(rolesChannel);
+      supabase.removeChannel(projectsChannel);
+    };
+  }, []);
+
   const checkAdminAndLoadUsers = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
