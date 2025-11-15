@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 import { RecentProjects } from "@/components/admin/RecentProjects";
+import { ProjectsChart, UsersChart, CombinedChart } from "@/components/admin/StatsCharts";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -13,6 +14,7 @@ export default function AdminDashboard() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [recentProjects, setRecentProjects] = useState(0);
   const [latestProjects, setLatestProjects] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<Array<{ date: string; projets: number; utilisateurs: number }>>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -93,6 +95,45 @@ export default function AdminDashboard() {
       .limit(5);
     
     setLatestProjects(projects || []);
+
+    // Chart data - last 30 days
+    await loadChartData();
+  };
+
+  const loadChartData = async () => {
+    const days = 30;
+    const chartDataArray: Array<{ date: string; projets: number; utilisateurs: number }> = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      // Count projects created on this day
+      const { count: projectsCount } = await supabase
+        .from("business_plans")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", date.toISOString())
+        .lt("created_at", nextDate.toISOString());
+
+      // Count users created on this day
+      const { count: usersCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", date.toISOString())
+        .lt("created_at", nextDate.toISOString());
+
+      chartDataArray.push({
+        date: date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+        projets: projectsCount || 0,
+        utilisateurs: usersCount || 0,
+      });
+    }
+
+    setChartData(chartDataArray);
   };
 
   if (loading) {
@@ -120,6 +161,13 @@ export default function AdminDashboard() {
           totalUsers={totalUsers}
           recentProjects={recentProjects}
         />
+
+        <CombinedChart data={chartData} />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <ProjectsChart data={chartData} />
+          <UsersChart data={chartData} />
+        </div>
 
         <RecentProjects projects={latestProjects} />
       </div>
