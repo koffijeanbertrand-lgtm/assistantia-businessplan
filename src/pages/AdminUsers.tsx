@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar } from "lucide-react";
+import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,8 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userProjects, setUserProjects] = useState<UserProject[]>([]);
   const [roleAction, setRoleAction] = useState<{ userId: string; action: "grant" | "revoke" } | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showProjectsDialog, setShowProjectsDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -203,6 +205,55 @@ export default function AdminUsers() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+
+    setIsDeleting(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Session non trouvée");
+      }
+
+      const response = await fetch(
+        `https://eayorbhlwmpsfeyzmkuj.supabase.co/functions/v1/delete-user`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ userId: deleteUser.id }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la suppression");
+      }
+
+      toast({
+        title: "Succès",
+        description: "Utilisateur supprimé avec succès",
+      });
+
+      setDeleteUser(null);
+      loadUsers();
+    } catch (error: any) {
+      console.error("Delete user error:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer l'utilisateur",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
       day: "numeric",
@@ -332,6 +383,14 @@ export default function AdminUsers() {
                             <Shield className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDeleteUser(user)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -359,6 +418,45 @@ export default function AdminUsers() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleRoleChange}>
               Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deleteUser} onOpenChange={() => !isDeleting && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer l'utilisateur</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Êtes-vous sûr de vouloir supprimer <strong>{deleteUser?.full_name || deleteUser?.email}</strong> ?
+              </p>
+              <p className="text-destructive font-medium">
+                Cette action est irréversible et supprimera :
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Le compte utilisateur</li>
+                <li>Tous ses projets ({deleteUser?.projectCount} projet{deleteUser?.projectCount !== 1 ? 's' : ''})</li>
+                <li>Toutes ses données personnelles</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                "Supprimer définitivement"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
