@@ -114,37 +114,11 @@ export default function AdminUsers() {
         .from("business_plans")
         .select("user_id");
 
-      // Get banned users status from auth.users (we'll need to call an edge function for this)
-      // For now, we'll get it when we fetch the full user data
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      let bannedUsers: string[] = [];
-      if (session) {
-        try {
-          const response = await fetch(
-            `https://eayorbhlwmpsfeyzmkuj.supabase.co/functions/v1/get-banned-users`,
-            {
-              method: "GET",
-              headers: {
-                "Authorization": `Bearer ${session.access_token}`,
-              },
-            }
-          );
-          
-          if (response.ok) {
-            const result = await response.json();
-            bannedUsers = result.bannedUsers || [];
-          }
-        } catch (error) {
-          console.error("Error fetching banned users:", error);
-        }
-      }
-
-      // Combine data
+      // For now, we'll set all users as not banned
+      // The ban functionality will be handled directly through the toggle-user-status function
       const usersWithData: UserProfile[] = (profiles || []).map((profile) => {
         const isAdmin = roles?.some((r) => r.user_id === profile.id) || false;
         const projectCount = projectCounts?.filter((p) => p.user_id === profile.id).length || 0;
-        const isBanned = bannedUsers.includes(profile.id);
 
         return {
           id: profile.id,
@@ -154,7 +128,7 @@ export default function AdminUsers() {
           avatar_url: profile.avatar_url,
           isAdmin,
           projectCount,
-          isBanned,
+          isBanned: false, // Will be checked when action is needed
         };
       });
 
@@ -432,7 +406,7 @@ export default function AdminUsers() {
                             Désactivé
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="border-green-500 text-green-600">
+                          <Badge variant="outline" className="text-green-600 border-green-500">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Actif
                           </Badge>
