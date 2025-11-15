@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar, Trash2 } from "lucide-react";
+import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar, Trash2, Ban, CheckCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,7 @@ interface UserProfile {
   avatar_url: string | null;
   isAdmin: boolean;
   projectCount: number;
+  isBanned: boolean;
 }
 
 interface UserProject {
@@ -51,8 +52,10 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userProjects, setUserProjects] = useState<UserProject[]>([]);
   const [roleAction, setRoleAction] = useState<{ userId: string; action: "grant" | "revoke" } | null>(null);
+  const [statusAction, setStatusAction] = useState<{ user: UserProfile; action: "ban" | "unban" } | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [showProjectsDialog, setShowProjectsDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -111,10 +114,37 @@ export default function AdminUsers() {
         .from("business_plans")
         .select("user_id");
 
+      // Get banned users status from auth.users (we'll need to call an edge function for this)
+      // For now, we'll get it when we fetch the full user data
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      let bannedUsers: string[] = [];
+      if (session) {
+        try {
+          const response = await fetch(
+            `https://eayorbhlwmpsfeyzmkuj.supabase.co/functions/v1/get-banned-users`,
+            {
+              method: "GET",
+              headers: {
+                "Authorization": `Bearer ${session.access_token}`,
+              },
+            }
+          );
+          
+          if (response.ok) {
+            const result = await response.json();
+            bannedUsers = result.bannedUsers || [];
+          }
+        } catch (error) {
+          console.error("Error fetching banned users:", error);
+        }
+      }
+
       // Combine data
       const usersWithData: UserProfile[] = (profiles || []).map((profile) => {
         const isAdmin = roles?.some((r) => r.user_id === profile.id) || false;
         const projectCount = projectCounts?.filter((p) => p.user_id === profile.id).length || 0;
+        const isBanned = bannedUsers.includes(profile.id);
 
         return {
           id: profile.id,
@@ -124,6 +154,7 @@ export default function AdminUsers() {
           avatar_url: profile.avatar_url,
           isAdmin,
           projectCount,
+          isBanned,
         };
       });
 
@@ -254,6 +285,60 @@ export default function AdminUsers() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    if (!statusAction) return;
+
+    setIsTogglingStatus(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Session non trouvée");
+      }
+
+      const response = await fetch(
+        `https://eayorbhlwmpsfeyzmkuj.supabase.co/functions/v1/toggle-user-status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ 
+            userId: statusAction.user.id,
+            action: statusAction.action
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors du changement de statut");
+      }
+
+      toast({
+        title: "Succès",
+        description: statusAction.action === "ban" 
+          ? "Compte désactivé avec succès"
+          : "Compte réactivé avec succès",
+      });
+
+      setStatusAction(null);
+      loadUsers();
+    } catch (error: any) {
+      console.error("Toggle status error:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de changer le statut",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
       day: "numeric",
@@ -312,6 +397,7 @@ export default function AdminUsers() {
                   <TableHead>Utilisateur</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Projets</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead>Rôle</TableHead>
                   <TableHead>Inscription</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -320,7 +406,7 @@ export default function AdminUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Aucun utilisateur trouvé
                     </TableCell>
                   </TableRow>
@@ -338,6 +424,19 @@ export default function AdminUsers() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{user.projectCount}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.isBanned ? (
+                          <Badge variant="destructive">
+                            <Ban className="h-3 w-3 mr-1" />
+                            Désactivé
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-green-500 text-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Actif
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {user.isAdmin ? (
@@ -383,6 +482,25 @@ export default function AdminUsers() {
                             <Shield className="h-4 w-4" />
                           </Button>
                         )}
+                        {user.isBanned ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setStatusAction({ user, action: "unban" })}
+                            className="text-green-600 hover:text-green-600"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setStatusAction({ user, action: "ban" })}
+                            className="text-orange-600 hover:text-orange-600"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -418,6 +536,48 @@ export default function AdminUsers() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleRoleChange}>
               Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Toggle Status Confirmation Dialog */}
+      <AlertDialog open={!!statusAction} onOpenChange={() => !isTogglingStatus && setStatusAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusAction?.action === "ban" ? "Désactiver le compte" : "Réactiver le compte"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                {statusAction?.action === "ban" 
+                  ? `Êtes-vous sûr de vouloir désactiver le compte de ${statusAction.user.full_name || statusAction.user.email} ?`
+                  : `Êtes-vous sûr de vouloir réactiver le compte de ${statusAction.user.full_name || statusAction.user.email} ?`
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {statusAction?.action === "ban" 
+                  ? "L'utilisateur ne pourra plus se connecter jusqu'à la réactivation de son compte. Ses données ne seront pas supprimées."
+                  : "L'utilisateur pourra à nouveau se connecter et accéder à son compte."
+                }
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTogglingStatus}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleToggleStatus}
+              disabled={isTogglingStatus}
+              className={statusAction?.action === "ban" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {isTogglingStatus ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {statusAction?.action === "ban" ? "Désactivation..." : "Réactivation..."}
+                </>
+              ) : (
+                statusAction?.action === "ban" ? "Désactiver" : "Réactiver"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
