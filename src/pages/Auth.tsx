@@ -15,6 +15,8 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -121,6 +123,36 @@ const Auth = () => {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "✅ Email envoyé",
+        description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe.",
+      });
+      setShowResetPassword(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (session) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
@@ -195,6 +227,15 @@ const Auth = () => {
                     "Se connecter"
                   )}
                 </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowResetPassword(true)}
+                  disabled={loading}
+                >
+                  Mot de passe oublié ?
+                </Button>
               </form>
             </TabsContent>
 
@@ -245,6 +286,55 @@ const Auth = () => {
             </TabsContent>
           </Tabs>
         </Card>
+
+        {showResetPassword && (
+          <Card className="mt-4 p-6 shadow-card gradient-card">
+            <h2 className="text-xl font-semibold mb-4 text-foreground">
+              Réinitialiser le mot de passe
+            </h2>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="votre@email.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 gradient-primary"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Envoi...
+                    </>
+                  ) : (
+                    "Envoyer le lien"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    setResetEmail("");
+                  }}
+                  disabled={loading}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         <div className="text-center mt-6">
           <Button
