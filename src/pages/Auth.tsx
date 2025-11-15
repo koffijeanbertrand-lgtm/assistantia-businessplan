@@ -17,15 +17,22 @@ const Auth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
-        if (session) {
+        
+        // Check if user is in password recovery mode
+        if (event === "PASSWORD_RECOVERY") {
+          setIsUpdatingPassword(true);
+        } else if (session && !isUpdatingPassword) {
           navigate("/");
         }
       }
@@ -34,13 +41,13 @@ const Auth = () => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
+      if (session && !isUpdatingPassword) {
         navigate("/");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isUpdatingPassword]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,12 +160,146 @@ const Auth = () => {
     }
   };
 
-  if (session) {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "✅ Mot de passe mis à jour",
+        description: "Votre mot de passe a été modifié avec succès.",
+      });
+      
+      setIsUpdatingPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (session && !isUpdatingPassword) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Redirection...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUpdatingPassword) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4 shadow-glow">
+              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              Nouveau mot de passe
+            </h1>
+            <p className="text-muted-foreground">
+              Choisissez un nouveau mot de passe sécurisé
+            </p>
+          </div>
+
+          <Card className="p-6 shadow-card gradient-card">
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">
+                  Nouveau mot de passe (min. 6 caractères)
+                </Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">
+                  Confirmer le mot de passe
+                </Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={6}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full gradient-primary"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  "Mettre à jour le mot de passe"
+                )}
+              </Button>
+            </form>
+          </Card>
+
+          <div className="text-center mt-6">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsUpdatingPassword(false);
+                navigate("/");
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Annuler
+            </Button>
+          </div>
         </div>
       </div>
     );
