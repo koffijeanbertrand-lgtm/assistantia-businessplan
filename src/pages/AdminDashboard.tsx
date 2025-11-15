@@ -22,6 +22,44 @@ export default function AdminDashboard() {
     checkAdminAndLoadData();
   }, []);
 
+  useEffect(() => {
+    // Set up realtime subscriptions for automatic updates
+    const businessPlansChannel = supabase
+      .channel('business-plans-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_plans'
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(businessPlansChannel);
+      supabase.removeChannel(profilesChannel);
+    };
+  }, []);
+
   const checkAdminAndLoadData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
