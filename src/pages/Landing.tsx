@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight, Zap, Shield, Clock, Settings } from "lucide-react";
+import { Sparkles, ArrowRight, Zap, Shield, Clock, Settings, User, LogOut, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -9,6 +11,8 @@ const Landing = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -17,6 +21,18 @@ const Landing = () => {
       
       if (!session) return;
 
+      setUserEmail(session.user.email || "");
+
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      setUserProfile(profile);
+
+      // Check admin role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -33,6 +49,10 @@ const Landing = () => {
       setIsLoggedIn(!!session);
       if (!session) {
         setIsAdmin(false);
+        setUserEmail("");
+        setUserProfile(null);
+      } else {
+        checkUserStatus();
       }
     });
 
@@ -42,6 +62,18 @@ const Landing = () => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const getUserInitials = () => {
+    if (userProfile?.full_name) {
+      return userProfile.full_name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return userEmail.charAt(0).toUpperCase();
   };
 
   const features = [
@@ -62,24 +94,58 @@ const Landing = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            {isAdmin && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate("/admin")}
-                className="text-muted-foreground hover:text-primary"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            )}
             {isLoggedIn ? (
               <>
-                <Button variant="ghost" onClick={handleSignOut}>
-                  Déconnexion
-                </Button>
-                <Button onClick={() => navigate("/generate")} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-                  Générer un plan
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => navigate("/admin")}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={userProfile?.avatar_url} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-50">
+                    <div className="flex items-center gap-2 p-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={userProfile?.avatar_url} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <p className="text-sm font-medium">{userProfile?.full_name || "Utilisateur"}</p>
+                        <p className="text-xs text-muted-foreground">{userEmail}</p>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profil
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/history")} className="cursor-pointer">
+                      <History className="mr-2 h-4 w-4" />
+                      Historique
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
