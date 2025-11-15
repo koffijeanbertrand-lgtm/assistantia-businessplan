@@ -1,10 +1,31 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight, Zap, Shield, Clock } from "lucide-react";
+import { Sparkles, ArrowRight, Zap, Shield, Clock, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .single();
+
+      setIsAdmin(!!roleData);
+    };
+
+    checkAdminRole();
+  }, []);
 
   const features = [
     { icon: Zap, title: "Génération instantanée", description: "Créez votre business plan en quelques minutes grâce à l'IA" },
@@ -24,6 +45,16 @@ const Landing = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate("/admin")}
+                className="text-muted-foreground hover:text-primary"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => navigate("/auth")}>
               Connexion
             </Button>
