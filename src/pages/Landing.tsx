@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { ContactForm } from "@/components/ContactForm";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -304,6 +305,11 @@ const Landing = () => {
             );
           })}
         </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="container mx-auto px-4 py-20">
+        <ContactForm />
       </section>
 
       {/* CTA Section */}
