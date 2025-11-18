@@ -1,49 +1,60 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight, Zap, Shield, Clock, Settings, User, LogOut, History } from "lucide-react";
+import { Sparkles, ArrowRight, Zap, Shield, Clock, Settings, User, LogOut, History, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { ContactForm } from "@/components/ContactForm";
+import { useToast } from "@/hooks/use-toast";
+
+declare global {
+  interface Window {
+    PaystackPop: any;
+  }
+}
+
+const PACKS = [
+  {
+    id: 'mini',
+    name: 'Mini Pack',
+    price: 2000,
+    credits: 2,
+    description: 'Parfait pour tester',
+    features: ['2 business plans', 'Support par email', 'Accès à l\'historique'],
+  },
+  {
+    id: 'starter',
+    name: 'Starter Pack',
+    price: 5000,
+    credits: 6,
+    description: 'Le plus populaire',
+    popular: true,
+    features: ['6 business plans', 'Support prioritaire', 'Accès à l\'historique', 'Modèles avancés'],
+  },
+  {
+    id: 'pro',
+    name: 'Pro Pack',
+    price: 10000,
+    credits: 15,
+    description: 'Pour les entrepreneurs actifs',
+    features: ['15 business plans', 'Support VIP 24/7', 'Accès à l\'historique', 'Modèles avancés', 'Export PDF premium'],
+  },
+];
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkUserStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
-      
-      if (!session) return;
-
-      setUserEmail(session.user.email || "");
-
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-      
-      setUserProfile(profile);
-
-      // Check admin role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .single();
-
-      setIsAdmin(!!roleData);
-    };
-
+    loadPaystackScript();
     checkUserStatus();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -60,6 +71,43 @@ const Landing = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const loadPaystackScript = () => {
+    if (!document.getElementById('paystack-script')) {
+      const script = document.createElement('script');
+      script.id = 'paystack-script';
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      document.body.appendChild(script);
+    }
+  };
+
+  const checkUserStatus = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsLoggedIn(!!session);
+    
+    if (!session) return;
+
+    setUserEmail(session.user.email || "");
+
+    // Fetch user profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    
+    setUserProfile(profile);
+
+    // Check admin role
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .single();
+
+    setIsAdmin(!!roleData);
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
@@ -75,6 +123,65 @@ const Landing = () => {
         .slice(0, 2);
     }
     return userEmail.charAt(0).toUpperCase();
+  };
+
+  const handlePurchase = (pack: typeof PACKS[0]) => {
+    if (!userEmail && !isLoggedIn) {
+      toast({
+        title: "Connexion requise",
+        description: "Veuillez vous connecter pour acheter des crédits",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
+    const email = userEmail || prompt('Entrez votre email pour continuer:');
+    if (!email) {
+      toast({
+        title: "Email requis",
+        description: "Veuillez fournir votre email pour continuer",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(pack.id);
+
+    const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+    if (!paystackPublicKey) {
+      toast({
+        title: "Configuration manquante",
+        description: "La clé publique Paystack n'est pas configurée",
+        variant: "destructive",
+      });
+      setLoading(null);
+      return;
+    }
+
+    const paystack = new window.PaystackPop();
+    paystack.newTransaction({
+      key: paystackPublicKey,
+      email: email,
+      amount: pack.price * 100,
+      currency: "XOF",
+      metadata: {
+        pack: pack.id,
+        credits: pack.credits,
+        userId: userProfile?.id || null,
+      },
+      callback: (response: any) => {
+        console.log('Payment successful:', response);
+        navigate(`/payment-success?reference=${response.reference}&pack=${pack.id}&email=${encodeURIComponent(email)}`);
+      },
+      onClose: () => {
+        setLoading(null);
+        toast({
+          title: "Paiement annulé",
+          description: "Vous avez annulé le paiement",
+        });
+      },
+    });
   };
 
   const features = [
@@ -109,8 +216,8 @@ const Landing = () => {
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                      <Avatar className="h-9 w-9">
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Avatar className="h-8 w-8">
                         <AvatarImage src={userProfile?.avatar_url} />
                         <AvatarFallback className="bg-primary/10 text-primary">
                           {getUserInitials()}
@@ -118,18 +225,10 @@ const Landing = () => {
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-50">
-                    <div className="flex items-center gap-2 p-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={userProfile?.avatar_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {getUserInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium">{userProfile?.full_name || "Utilisateur"}</p>
-                        <p className="text-xs text-muted-foreground">{userEmail}</p>
-                      </div>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium">{userProfile?.full_name || "Utilisateur"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
@@ -140,12 +239,6 @@ const Landing = () => {
                       <History className="mr-2 h-4 w-4" />
                       Historique
                     </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Administration
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
@@ -213,10 +306,8 @@ const Landing = () => {
           <div className="relative mt-16 h-96">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-full max-w-3xl h-full">
-                {/* Central Glow Effect */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-radial from-primary/20 via-accent/10 to-transparent rounded-full blur-3xl animate-pulse" />
                 
-                {/* Floating Cards */}
                 <div className="absolute top-0 left-0 animate-float-slow">
                   <Card className="bg-card/80 backdrop-blur-sm border-primary/20 shadow-glow">
                     <CardContent className="p-6">
@@ -307,6 +398,92 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="container mx-auto px-4 py-20 bg-gradient-to-b from-background to-primary/5">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Choisissez votre{" "}
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              pack de crédits
+            </span>
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Achetez des crédits pour générer vos business plans
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {PACKS.map((pack, index) => (
+            <Card 
+              key={pack.id}
+              className={`relative group hover:shadow-elegant transition-all duration-300 ${
+                pack.popular 
+                  ? 'border-primary/50 shadow-glow scale-105' 
+                  : 'border-border/50 hover:border-primary/30'
+              } animate-fade-in`}
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              {pack.popular && (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent">
+                  Plus populaire
+                </Badge>
+              )}
+              <CardContent className="p-6 space-y-6">
+                <div className="text-center space-y-2">
+                  <h3 className="font-bold text-xl">{pack.name}</h3>
+                  <p className="text-sm text-muted-foreground">{pack.description}</p>
+                  <div className="py-4">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      {pack.price.toLocaleString()} FCFA
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {pack.credits} crédits
+                    </div>
+                  </div>
+                </div>
+
+                <ul className="space-y-3">
+                  {pack.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full ${
+                    pack.popular
+                      ? 'bg-gradient-to-r from-primary to-accent hover:opacity-90'
+                      : 'bg-primary hover:bg-primary/90'
+                  }`}
+                  onClick={() => handlePurchase(pack)}
+                  disabled={loading === pack.id}
+                >
+                  {loading === pack.id ? (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4 animate-pulse" />
+                      Traitement...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Acheter maintenant
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center mt-8">
+          <p className="text-sm text-muted-foreground">
+            Paiement sécurisé via Paystack • Tous les prix sont en FCFA
+          </p>
+        </div>
+      </section>
+
       {/* Contact Section */}
       <section className="container mx-auto px-4 py-20">
         <ContactForm />
@@ -317,30 +494,30 @@ const Landing = () => {
         <Card className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-primary/20 shadow-elegant">
           <CardContent className="p-12 text-center space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold">
-              Prêt à transformer vos idées en succès ?
+              Prêt à démarrer votre projet ?
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Rejoignez des milliers d'entrepreneurs qui font confiance à notre plateforme
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Rejoignez des centaines d'entrepreneurs qui ont créé leur business plan avec notre IA
             </p>
             <Button 
               size="lg"
               onClick={() => navigate("/generate")}
-              className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-8 h-14 group shadow-glow"
+              className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-8 h-14"
             >
               Commencer maintenant
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 bg-background/80 backdrop-blur-sm">
+      <footer className="border-t border-border/50 bg-background/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span className="font-semibold">BusinessPlan AI</span>
+              <span className="font-semibold text-foreground">BusinessPlan AI</span>
             </div>
             <p className="text-sm text-muted-foreground">
               © 2024 BusinessPlan AI. Tous droits réservés.
