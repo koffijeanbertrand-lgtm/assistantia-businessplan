@@ -10,6 +10,8 @@ import Generate from "./pages/Generate";
 import Auth from "./pages/Auth";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
+import Pricing from "./pages/Pricing";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProjects from "./pages/AdminProjects";
 import AdminProjectDetail from "./pages/AdminProjectDetail";
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/history" element={<History />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/projects" element={<AdminProjects />} />
             <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />

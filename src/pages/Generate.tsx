@@ -26,6 +26,7 @@ const Generate = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userCredits, setUserCredits] = useState<number>(0);
   const [generatedPlan, setGeneratedPlan] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [businessData, setBusinessData] = useState<BusinessData | null>(null);
@@ -70,6 +71,18 @@ const Generate = () => {
 
       if (error) throw error;
       setProfile(data);
+      
+      // Fetch user credits
+      const { data: userEmail } = await supabase.auth.getUser();
+      if (userEmail?.user?.email) {
+        const { data: creditsData } = await supabase
+          .from("user_credits")
+          .select("credits")
+          .eq("email", userEmail.user.email)
+          .single();
+        
+        setUserCredits(creditsData?.credits || 0);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
@@ -95,6 +108,17 @@ const Generate = () => {
       return;
     }
 
+    // Check if user has credits
+    if (userCredits <= 0) {
+      toast({
+        title: "Crédits insuffisants",
+        description: "Vous devez acheter des crédits pour générer un business plan",
+        variant: "destructive",
+      });
+      navigate("/pricing");
+      return;
+    }
+
     setIsGenerating(true);
     setBusinessData(data);
 
@@ -110,6 +134,18 @@ const Generate = () => {
 
       if (functionData?.businessPlan) {
         setGeneratedPlan(functionData.businessPlan);
+        
+        // Deduct 1 credit
+        const { error: creditError } = await supabase
+          .from("user_credits")
+          .update({ credits: userCredits - 1 })
+          .eq("email", user.email!);
+        
+        if (creditError) {
+          console.error("Error deducting credits:", creditError);
+        } else {
+          setUserCredits(userCredits - 1);
+        }
       } else {
         throw new Error("Aucun business plan généré");
       }
@@ -220,7 +256,21 @@ const Generate = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Button
+              {/* Display credits */}
+              <div className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-semibold text-sm">
+                {userCredits} crédit{userCredits > 1 ? 's' : ''}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/pricing")}
+                className="gap-2"
+              >
+                Acheter des crédits
+              </Button>
+              
+              <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/history")}
