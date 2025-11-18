@@ -66,11 +66,11 @@ export default function Pricing() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
 
-    if (user?.email) {
+    if (user?.id) {
       const { data } = await supabase
         .from('user_credits')
         .select('credits')
-        .eq('email', user.email)
+        .eq('user_id', user.id)
         .single();
       
       setUserCredits(data?.credits || 0);
@@ -78,11 +78,21 @@ export default function Pricing() {
   };
 
   const handlePurchase = (pack: typeof PACKS[0]) => {
-    const email = user?.email || prompt('Entrez votre email pour continuer:');
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Veuillez vous connecter pour acheter des crédits",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
+    const email = user.email;
     if (!email) {
       toast({
         title: "Email requis",
-        description: "Veuillez fournir votre email pour continuer",
+        description: "Votre compte doit avoir un email",
         variant: "destructive",
       });
       return;

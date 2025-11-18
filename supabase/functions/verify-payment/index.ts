@@ -93,10 +93,14 @@ serve(async (req: Request) => {
     }
 
     // Add credits to user
+    if (!userId) {
+      throw new Error('User ID is required for payment processing');
+    }
+
     const { data: existingCredits } = await supabase
       .from('user_credits')
       .select('*')
-      .eq('email', email)
+      .eq('user_id', userId)
       .single();
 
     if (existingCredits) {
@@ -107,7 +111,7 @@ serve(async (req: Request) => {
           credits: existingCredits.credits + creditsToAdd,
           updated_at: new Date().toISOString(),
         })
-        .eq('email', email);
+        .eq('user_id', userId);
 
       if (updateError) {
         console.error('Error updating credits:', updateError);
@@ -118,8 +122,7 @@ serve(async (req: Request) => {
       const { error: insertError } = await supabase
         .from('user_credits')
         .insert({
-          user_id: userId || null,
-          email,
+          user_id: userId,
           credits: creditsToAdd,
         });
 
