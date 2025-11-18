@@ -456,9 +456,29 @@ export type Database = {
         Args: { encrypted_data: string; secret_key: string }
         Returns: string
       }
+      decrypt_text: {
+        Args: { encrypted_data: string; secret_key: string }
+        Returns: string
+      }
       encrypt_email: {
         Args: { email_text: string; secret_key: string }
         Returns: string
+      }
+      encrypt_text: {
+        Args: { secret_key: string; text_value: string }
+        Returns: string
+      }
+      get_contact_messages_safe: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: {
+          anonymized_at: string
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          read: boolean
+        }[]
       }
       get_newsletter_subscribers_paginated: {
         Args: { _limit?: number; _offset?: number }
