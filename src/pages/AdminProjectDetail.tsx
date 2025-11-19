@@ -64,7 +64,7 @@ export default function AdminProjectDetail() {
       .from("business_plans")
       .select(`
         *,
-        profiles(email, full_name)
+        profiles(full_name)
       `)
       .eq("id", id)
       .maybeSingle();
@@ -153,10 +153,10 @@ export default function AdminProjectDetail() {
                   <Calendar className="h-4 w-4" />
                   {formatDate(project.created_at)}
                 </span>
-                {project.profiles?.email && (
+                {project.profiles?.full_name && (
                   <span className="flex items-center gap-1">
                     <User className="h-4 w-4" />
-                    {project.profiles.email}
+                    {project.profiles.full_name}
                   </span>
                 )}
                 <span className="flex items-center gap-1">

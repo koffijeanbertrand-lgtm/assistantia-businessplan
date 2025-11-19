@@ -69,7 +69,7 @@ export default function AdminProjects() {
         sector,
         created_at,
         user_id,
-        profiles!inner(email)
+        profiles!inner(full_name)
       `)
       .order("created_at", { ascending: false });
 
@@ -122,11 +122,11 @@ export default function AdminProjects() {
   };
 
   const filteredProjects = projects.filter((project) => {
-    const email = project.profiles?.email || "";
+    const fullName = project.profiles?.full_name || "";
     const searchLower = searchTerm.toLowerCase();
     return (
       project.project_name.toLowerCase().includes(searchLower) ||
-      email.toLowerCase().includes(searchLower) ||
+      fullName.toLowerCase().includes(searchLower) ||
       project.sector.toLowerCase().includes(searchLower)
     );
   });
@@ -190,7 +190,7 @@ export default function AdminProjects() {
                       <TableCell className="font-medium">
                         {project.project_name}
                       </TableCell>
-                      <TableCell>{project.profiles?.email || "N/A"}</TableCell>
+                      <TableCell>{project.profiles?.full_name || "N/A"}</TableCell>
                       <TableCell>{project.sector}</TableCell>
                       <TableCell>{formatDate(project.created_at)}</TableCell>
                       <TableCell className="text-right space-x-2">

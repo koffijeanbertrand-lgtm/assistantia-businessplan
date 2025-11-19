@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar, Trash2 } from "lucide-react";
+import { Loader2, Search, Shield, ShieldOff, Eye, Mail, Calendar, Trash2, User } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,6 @@ import {
 
 interface UserProfile {
   id: string;
-  email: string | null;
   full_name: string | null;
   created_at: string;
   avatar_url: string | null;
@@ -171,7 +170,6 @@ export default function AdminUsers() {
 
         return {
           id: profile.id,
-          email: profile.email,
           full_name: profile.full_name,
           created_at: profile.created_at,
           avatar_url: profile.avatar_url,
@@ -319,8 +317,8 @@ export default function AdminUsers() {
   const filteredUsers = users.filter((user) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      user.email?.toLowerCase().includes(searchLower) ||
-      user.full_name?.toLowerCase().includes(searchLower)
+      user.full_name?.toLowerCase().includes(searchLower) ||
+      user.id.toLowerCase().includes(searchLower)
     );
   });
 
@@ -364,7 +362,7 @@ export default function AdminUsers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Utilisateur</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>ID utilisateur</TableHead>
                   <TableHead>Projets</TableHead>
                   <TableHead>Rôle</TableHead>
                   <TableHead>Inscription</TableHead>
@@ -386,8 +384,8 @@ export default function AdminUsers() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {user.email || "N/A"}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {user.id.substring(0, 8)}...
                         </div>
                       </TableCell>
                       <TableCell>
@@ -484,7 +482,7 @@ export default function AdminUsers() {
             <AlertDialogTitle>Supprimer l'utilisateur</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Êtes-vous sûr de vouloir supprimer <strong>{deleteUser?.full_name || deleteUser?.email}</strong> ?
+                Êtes-vous sûr de vouloir supprimer <strong>{deleteUser?.full_name || "cet utilisateur"}</strong> ?
               </p>
               <p className="text-destructive font-medium">
                 Cette action est irréversible et supprimera :
@@ -521,7 +519,7 @@ export default function AdminUsers() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              Projets de {selectedUser?.full_name || selectedUser?.email}
+              Projets de {selectedUser?.full_name || "l'utilisateur"}
             </DialogTitle>
             <DialogDescription>
               {userProjects.length} projet(s) créé(s)

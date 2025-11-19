@@ -13,7 +13,6 @@ import type { Session } from "@supabase/supabase-js";
 
 interface Profile {
   id: string;
-  email: string | null;
   full_name: string | null;
   avatar_url: string | null;
   preferences: {
@@ -278,18 +277,18 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Email (read-only) */}
+              {/* Email (read-only from auth) */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  value={profile?.email || ""}
+                  value={session?.user?.email || ""}
                   disabled
                   className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  L'email ne peut pas être modifié
+                  L'email est géré par le système d'authentification
                 </p>
               </div>
 
