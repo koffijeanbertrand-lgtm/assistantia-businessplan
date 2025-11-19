@@ -73,16 +73,13 @@ const Index = () => {
       setProfile(data);
       
       // Fetch user credits
-      const { data: userEmail } = await supabase.auth.getUser();
-      if (userEmail?.user?.email) {
-        const { data: creditsData } = await supabase
-          .from("user_credits")
-          .select("credits")
-          .eq("email", userEmail.user.email)
-          .single();
-        
-        setUserCredits(creditsData?.credits || 0);
-      }
+      const { data: creditsData } = await supabase
+        .from("user_credits")
+        .select("credits")
+        .eq("user_id", userId)
+        .single();
+      
+      setUserCredits(creditsData?.credits || 0);
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
@@ -139,7 +136,7 @@ const Index = () => {
         const { error: creditError } = await supabase
           .from("user_credits")
           .update({ credits: userCredits - 1 })
-          .eq("email", user.email!);
+          .eq("user_id", user.id);
         
         if (creditError) {
           console.error("Error deducting credits:", creditError);
