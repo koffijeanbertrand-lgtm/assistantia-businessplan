@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCreditNotifications } from "@/hooks/useCreditNotifications";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, Loader2, History as HistoryIcon, LogOut, User } from "lucide-react";
 import { BusinessPlanForm } from "@/components/BusinessPlanForm";
@@ -84,6 +85,9 @@ const Generate = () => {
       console.error("Error fetching profile:", error);
     }
   };
+
+  // Activer les notifications de crédits
+  useCreditNotifications({ credits: userCredits, userId: user?.id });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
