@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Upload, User, Moon, Sun, Shield } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, User, Moon, Sun, Shield, Receipt } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 
 interface Profile {
@@ -348,9 +348,17 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Admin Link */}
+              {/* Quick Actions */}
               {session && (
-                <div className="pt-6 border-t border-border">
+                <div className="pt-6 border-t border-border space-y-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/payment-history")}
+                    className="w-full"
+                  >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Historique des paiements
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => navigate("/admin")}
