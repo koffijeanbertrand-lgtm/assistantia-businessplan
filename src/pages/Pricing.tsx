@@ -104,11 +104,30 @@ export default function Pricing() {
     // If pack is free, add credits directly
     if (pack.free) {
       try {
+        // Check if user has already claimed the free pack
+        const { data: existingFreePack } = await supabase
+          .from('payment_history')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('pack_type', 'mini')
+          .eq('status', 'success')
+          .maybeSingle();
+
+        if (existingFreePack) {
+          toast({
+            title: "Pack gratuit déjà réclamé",
+            description: "Vous avez déjà bénéficié du pack gratuit. Choisissez un autre pack.",
+            variant: "destructive",
+          });
+          setLoading(null);
+          return;
+        }
+
         const { data: existingCredits } = await supabase
           .from('user_credits')
           .select('credits')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (existingCredits) {
           await supabase
@@ -120,6 +139,19 @@ export default function Pricing() {
             .from('user_credits')
             .insert({ user_id: user.id, credits: pack.credits });
         }
+
+        // Record the free pack claim in payment history
+        await supabase
+          .from('payment_history')
+          .insert({
+            user_id: user.id,
+            email: email,
+            pack_type: pack.id,
+            amount: 0,
+            credits_added: pack.credits,
+            status: 'success',
+            reference: `free-${user.id}-${Date.now()}`,
+          });
 
         toast({
           title: "Crédits gratuits ajoutés !",
