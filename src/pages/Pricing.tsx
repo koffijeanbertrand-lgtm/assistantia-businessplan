@@ -17,10 +17,11 @@ const PACKS = [
   {
     id: 'mini',
     name: 'Mini Pack',
-    price: 2000,
+    price: 0,
     credits: 2,
-    description: 'Parfait pour tester',
+    description: 'Essai gratuit',
     features: ['2 business plans', 'Support par email', 'Accès à l\'historique'],
+    free: true,
   },
   {
     id: 'starter',
@@ -77,11 +78,11 @@ export default function Pricing() {
     }
   };
 
-  const handlePurchase = (pack: typeof PACKS[0]) => {
+  const handlePurchase = async (pack: typeof PACKS[0]) => {
     if (!user) {
       toast({
         title: "Connexion requise",
-        description: "Veuillez vous connecter pour acheter des crédits",
+        description: "Veuillez vous connecter pour obtenir des crédits",
         variant: "destructive",
       });
       navigate('/auth');
@@ -99,6 +100,45 @@ export default function Pricing() {
     }
 
     setLoading(pack.id);
+
+    // If pack is free, add credits directly
+    if (pack.free) {
+      try {
+        const { data: existingCredits } = await supabase
+          .from('user_credits')
+          .select('credits')
+          .eq('user_id', user.id)
+          .single();
+
+        if (existingCredits) {
+          await supabase
+            .from('user_credits')
+            .update({ credits: existingCredits.credits + pack.credits })
+            .eq('user_id', user.id);
+        } else {
+          await supabase
+            .from('user_credits')
+            .insert({ user_id: user.id, credits: pack.credits });
+        }
+
+        toast({
+          title: "Crédits gratuits ajoutés !",
+          description: `${pack.credits} crédits ont été ajoutés à votre compte`,
+        });
+
+        await loadUserAndCredits();
+        setLoading(null);
+      } catch (error) {
+        console.error('Error adding free credits:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible d'ajouter les crédits gratuits",
+          variant: "destructive",
+        });
+        setLoading(null);
+      }
+      return;
+    }
 
     const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
     if (!paystackPublicKey) {
@@ -174,9 +214,11 @@ export default function Pricing() {
 
               <CardContent className="space-y-6">
                 <div>
-                  <div className="text-4xl font-bold">{pack.price.toLocaleString()} FCFA</div>
+                  <div className="text-4xl font-bold">
+                    {pack.free ? 'Gratuit' : `${pack.price.toLocaleString()} FCFA`}
+                  </div>
                   <div className="text-muted-foreground mt-1">
-                    {pack.credits} crédits ({Math.round(pack.price / pack.credits)} FCFA/crédit)
+                    {pack.credits} crédits {!pack.free && `(${Math.round(pack.price / pack.credits)} FCFA/crédit)`}
                   </div>
                 </div>
 
@@ -197,7 +239,7 @@ export default function Pricing() {
                   onClick={() => handlePurchase(pack)}
                   disabled={loading !== null}
                 >
-                  {loading === pack.id ? 'Chargement...' : 'Acheter avec Paystack'}
+                  {loading === pack.id ? 'Chargement...' : pack.free ? 'Obtenir gratuitement' : 'Acheter avec Paystack'}
                 </Button>
               </CardFooter>
             </Card>
