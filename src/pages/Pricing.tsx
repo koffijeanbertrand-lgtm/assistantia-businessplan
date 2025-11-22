@@ -197,12 +197,20 @@ export default function Pricing() {
           {PACKS.map((pack) => (
             <Card 
               key={pack.id} 
-              className={`relative ${pack.popular ? 'border-primary shadow-lg' : ''}`}
+              className={`relative ${pack.popular ? 'border-primary shadow-lg' : ''} ${pack.free ? 'border-green-500 shadow-md' : ''}`}
             >
               {pack.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground">
                     Le plus populaire
+                  </Badge>
+                </div>
+              )}
+              
+              {pack.free && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-green-500 text-white hover:bg-green-600">
+                    Gratuit
                   </Badge>
                 </div>
               )}
