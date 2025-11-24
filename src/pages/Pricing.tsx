@@ -18,9 +18,9 @@ const PACKS = [
     id: 'mini',
     name: 'Mini Pack',
     price: 0,
-    credits: 2,
+    credits: 1,
     description: 'Essai gratuit',
-    features: ['2 business plans', 'Support par email', 'Accès à l\'historique'],
+    features: ['1 business plan gratuit', 'Support par email', 'Accès à l\'historique'],
     free: true,
   },
   {

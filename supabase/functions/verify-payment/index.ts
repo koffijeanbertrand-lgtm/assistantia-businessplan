@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const PACK_CREDITS = {
-  mini: 2,
+  mini: 1,
   starter: 6,
   pro: 15,
 };
