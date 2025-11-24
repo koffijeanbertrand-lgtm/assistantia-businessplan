@@ -59,6 +59,16 @@ export default function Pricing() {
       const script = document.createElement('script');
       script.id = 'paystack-script';
       script.src = 'https://js.paystack.co/v1/inline.js';
+      script.async = true;
+      script.onload = () => console.log('Paystack script loaded successfully');
+      script.onerror = () => {
+        console.error('Failed to load Paystack script');
+        toast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger le système de paiement. Veuillez rafraîchir la page.",
+          variant: "destructive",
+        });
+      };
       document.body.appendChild(script);
     }
   };
@@ -210,29 +220,50 @@ export default function Pricing() {
       return;
     }
 
-    const paystack = new window.PaystackPop();
-    paystack.newTransaction({
-      key: paystackPublicKey,
-      email: email,
-      amount: pack.price * 100, // Convert to kobo
-      currency: "XOF",
-      metadata: {
-        pack: pack.id,
-        credits: pack.credits,
-        userId: user?.id || null,
-      },
-      callback: (response: any) => {
-        console.log('Payment successful:', response);
-        navigate(`/payment-success?reference=${response.reference}&pack=${pack.id}&email=${encodeURIComponent(email)}`);
-      },
-      onClose: () => {
-        setLoading(null);
-        toast({
-          title: "Paiement annulé",
-          description: "Vous avez annulé le paiement",
-        });
-      },
-    });
+    // Verify Paystack script is loaded
+    if (!window.PaystackPop) {
+      toast({
+        title: "Erreur de chargement",
+        description: "Le système de paiement n'est pas encore chargé. Veuillez réessayer dans quelques secondes.",
+        variant: "destructive",
+      });
+      setLoading(null);
+      return;
+    }
+
+    try {
+      const paystack = new window.PaystackPop();
+      paystack.newTransaction({
+        key: paystackPublicKey,
+        email: email,
+        amount: pack.price * 100, // Convert to kobo
+        currency: "XOF",
+        metadata: {
+          pack: pack.id,
+          credits: pack.credits,
+          userId: user?.id || null,
+        },
+        callback: (response: any) => {
+          console.log('Payment successful:', response);
+          navigate(`/payment-success?reference=${response.reference}&pack=${pack.id}&email=${encodeURIComponent(email)}`);
+        },
+        onClose: () => {
+          setLoading(null);
+          toast({
+            title: "Paiement annulé",
+            description: "Vous avez annulé le paiement",
+          });
+        },
+      });
+    } catch (error) {
+      console.error('Paystack error:', error);
+      toast({
+        title: "Erreur de paiement",
+        description: "Une erreur est survenue lors de l'initialisation du paiement",
+        variant: "destructive",
+      });
+      setLoading(null);
+    }
   };
 
   return (
