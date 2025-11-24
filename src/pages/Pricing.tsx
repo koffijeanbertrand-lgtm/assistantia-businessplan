@@ -20,7 +20,7 @@ const PACKS = [
     price: 0,
     credits: 1,
     description: 'Essai gratuit',
-    features: ['1 business plan gratuit', 'Support par email', 'Accès à l\'historique'],
+    features: ['1 crédit gratuit par jour', 'Support par email', 'Accès à l\'historique'],
     free: true,
   },
   {
@@ -104,23 +104,32 @@ export default function Pricing() {
     // If pack is free, add credits directly
     if (pack.free) {
       try {
-        // Check if user has already claimed the free pack
-        const { data: existingFreePack } = await supabase
+        // Check if user has claimed the free pack in the last 24 hours
+        const { data: recentFreePack } = await supabase
           .from('payment_history')
-          .select('id')
+          .select('created_at')
           .eq('user_id', user.id)
           .eq('pack_type', 'mini')
           .eq('status', 'success')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
-        if (existingFreePack) {
-          toast({
-            title: "Pack gratuit déjà réclamé",
-            description: "Vous avez déjà bénéficié du pack gratuit. Choisissez un autre pack.",
-            variant: "destructive",
-          });
-          setLoading(null);
-          return;
+        if (recentFreePack) {
+          const lastClaimDate = new Date(recentFreePack.created_at);
+          const now = new Date();
+          const hoursSinceLastClaim = (now.getTime() - lastClaimDate.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursSinceLastClaim < 24) {
+            const hoursRemaining = Math.ceil(24 - hoursSinceLastClaim);
+            toast({
+              title: "Pack gratuit déjà réclamé",
+              description: `Vous pourrez réclamer votre prochain crédit gratuit dans ${hoursRemaining}h.`,
+              variant: "destructive",
+            });
+            setLoading(null);
+            return;
+          }
         }
 
         const { data: existingCredits } = await supabase
