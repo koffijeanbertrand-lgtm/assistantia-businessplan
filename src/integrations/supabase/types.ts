@@ -523,6 +523,20 @@ export type Database = {
           table_name: string
         }[]
       }
+      get_user_payment_history: {
+        Args: { _user_id: string }
+        Returns: {
+          amount: number
+          created_at: string
+          credits_added: number
+          currency: string
+          email: string
+          id: string
+          pack_type: string
+          reference: string
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
