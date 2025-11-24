@@ -132,12 +132,24 @@ serve(async (req: Request) => {
       }
     }
 
-    // Record payment in history
+    // Encrypt email before storing
+    const { data: encryptedEmail, error: encryptError } = await supabase
+      .rpc('encrypt_text', {
+        text_value: email,
+        secret_key: 'ENCRYPTION_KEY',
+      });
+
+    if (encryptError) {
+      console.error('Error encrypting email:', encryptError);
+      throw new Error('Failed to encrypt email');
+    }
+
+    // Record payment in history with encrypted email
     const { error: historyError } = await supabase
       .from('payment_history')
       .insert({
         user_id: userId || null,
-        email,
+        email: encryptedEmail,
         reference,
         amount: verifyData.data.amount,
         currency: verifyData.data.currency,

@@ -59,10 +59,7 @@ const PaymentHistory = () => {
   const fetchPaymentHistory = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("payment_history")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .rpc('get_user_payment_history', { _user_id: userId });
 
       if (error) throw error;
       setPayments(data || []);

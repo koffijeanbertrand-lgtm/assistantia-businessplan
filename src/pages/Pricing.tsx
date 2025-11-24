@@ -140,12 +140,30 @@ export default function Pricing() {
             .insert({ user_id: user.id, credits: pack.credits });
         }
 
-        // Record the free pack claim in payment history
+        // Encrypt email before recording in payment history
+        const { data: encryptedEmail, error: encryptError } = await supabase
+          .rpc('encrypt_text', {
+            text_value: email,
+            secret_key: 'ENCRYPTION_KEY',
+          });
+
+        if (encryptError) {
+          console.error('Error encrypting email:', encryptError);
+          toast({
+            title: "Erreur",
+            description: "Erreur lors de l'enregistrement du paiement",
+            variant: "destructive",
+          });
+          setLoading(null);
+          return;
+        }
+
+        // Record the free pack claim in payment history with encrypted email
         await supabase
           .from('payment_history')
           .insert({
             user_id: user.id,
-            email: email,
+            email: encryptedEmail,
             pack_type: pack.id,
             amount: 0,
             credits_added: pack.credits,
