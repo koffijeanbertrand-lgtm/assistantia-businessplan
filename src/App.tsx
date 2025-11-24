@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentHistory from "./pages/PaymentHistory";
+import PaystackTest from "./pages/PaystackTest";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProjects from "./pages/AdminProjects";
 import AdminProjectDetail from "./pages/AdminProjectDetail";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-history" element={<PaymentHistory />} />
+            <Route path="/paystack-test" element={<PaystackTest />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/projects" element={<AdminProjects />} />
             <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
