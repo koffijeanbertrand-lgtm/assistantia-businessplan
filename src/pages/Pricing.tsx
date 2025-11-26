@@ -210,10 +210,10 @@ export default function Pricing() {
     }
 
     const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-    if (!paystackPublicKey) {
+    if (!paystackPublicKey || paystackPublicKey === "YOUR_PAYSTACK_PUBLIC_KEY_HERE") {
       toast({
-        title: "Configuration manquante",
-        description: "La clé publique Paystack n'est pas configurée",
+        title: "Configuration Paystack incomplète",
+        description: "Ajoutez votre vraie clé publique Paystack (VITE_PAYSTACK_PUBLIC_KEY) puis réessayez.",
         variant: "destructive",
       });
       setLoading(null);
