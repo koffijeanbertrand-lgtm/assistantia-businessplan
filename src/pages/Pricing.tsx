@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, TestTube } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -344,10 +344,19 @@ export default function Pricing() {
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <Button variant="ghost" onClick={() => navigate('/')}>
-            Retour à l'accueil
-          </Button>
+        <div className="text-center mt-12 space-y-4">
+          <div className="flex gap-4 justify-center">
+            <Button variant="ghost" onClick={() => navigate('/')}>
+              Retour à l'accueil
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/paystack-test')}>
+              <TestTube className="mr-2 h-4 w-4" />
+              Tester Paystack
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Utilisez la page de test pour vérifier que Paystack est correctement configuré
+          </p>
         </div>
       </div>
     </div>
