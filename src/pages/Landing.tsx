@@ -519,9 +519,19 @@ const Landing = () => {
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-semibold text-foreground">BusinessPlan AI</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2024 BusinessPlan AI. Tous droits réservés.
-            </p>
+            <div className="flex items-center gap-6">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate("/paystack-test")}
+                className="text-xs text-muted-foreground hover:text-primary"
+              >
+                Test Paystack
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                © 2024 BusinessPlan AI. Tous droits réservés.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
