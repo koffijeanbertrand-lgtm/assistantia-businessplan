@@ -463,6 +463,10 @@ export type Database = {
         Args: { submitter_email: string }
         Returns: boolean
       }
+      check_payment_reference_exists: {
+        Args: { _reference: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_old_audit_logs: {
         Args: { older_than_days?: number }
         Returns: number
