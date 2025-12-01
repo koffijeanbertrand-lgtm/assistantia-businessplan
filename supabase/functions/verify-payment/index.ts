@@ -70,14 +70,18 @@ serve(async (req: Request) => {
 
     const creditsToAdd = PACK_CREDITS[pack];
 
-    // Check if payment already processed
-    const { data: existingPayment } = await supabase
-      .from('payment_history')
-      .select('*')
-      .eq('reference', reference)
-      .single();
+    // Check if payment already processed (using encrypted reference check)
+    const { data: referenceExists, error: checkError } = await supabase
+      .rpc('check_payment_reference_exists', {
+        _reference: reference,
+        _user_id: userId
+      });
 
-    if (existingPayment) {
+    if (checkError) {
+      console.error('Error checking payment reference:', checkError);
+    }
+
+    if (referenceExists) {
       console.log('Payment already processed');
       return new Response(
         JSON.stringify({ 
@@ -132,7 +136,7 @@ serve(async (req: Request) => {
       }
     }
 
-    // Encrypt email before storing
+    // Encrypt email and reference before storing
     const { data: encryptedEmail, error: encryptError } = await supabase
       .rpc('encrypt_text', {
         text_value: email,
@@ -144,13 +148,24 @@ serve(async (req: Request) => {
       throw new Error('Failed to encrypt email');
     }
 
-    // Record payment in history with encrypted email
+    const { data: encryptedReference, error: encryptRefError } = await supabase
+      .rpc('encrypt_text', {
+        text_value: reference,
+        secret_key: 'ENCRYPTION_KEY',
+      });
+
+    if (encryptRefError) {
+      console.error('Error encrypting reference:', encryptRefError);
+      throw new Error('Failed to encrypt reference');
+    }
+
+    // Record payment in history with encrypted data
     const { error: historyError } = await supabase
       .from('payment_history')
       .insert({
         user_id: userId || null,
         email: encryptedEmail,
-        reference,
+        reference: encryptedReference,
         amount: verifyData.data.amount,
         currency: verifyData.data.currency,
         pack_type: pack,
