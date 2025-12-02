@@ -487,6 +487,15 @@ export type Database = {
         Args: { secret_key: string; text_value: string }
         Returns: string
       }
+      get_all_users_safe: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       get_contact_messages_safe: {
         Args: { _limit?: number; _offset?: number }
         Returns: {
@@ -525,6 +534,15 @@ export type Database = {
           ip_addresses: string[]
           last_access: string
           table_name: string
+        }[]
+      }
+      get_user_data_safe: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
         }[]
       }
       get_user_payment_history: {
